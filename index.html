@@ -1,70 +1,82 @@
 <!DOCTYPE html>
 <html lang="ja">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>お気に入り一覧</title>
-  <style>
-    body { font-family: sans-serif; padding: 15px; background: #f9f9f9; color: #333; }
-    h1 { font-size: 1.2rem; }
-    ul { list-style: none; padding-left: 20px; }
-    li { margin: 6px 0; }
-    .folder { font-weight: bold; color: #2b542c; margin-top: 10px; }
-    a { color: #0066cc; text-decoration: none; word-break: break-all; }
-    a:hover { text-decoration: underline; }
-  </style>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>My Bookmarks Viewer</title>
+    <style>
+        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; margin: 20px; background: #f9f9f9; color: #333; }
+        h1 { font-size: 1.5rem; color: #111; }
+        ul { list-style-type: none; padding-left: 20px; margin: 4px 0; }
+        .folder { cursor: pointer; font-weight: bold; color: #0066cc; margin: 6px 0; padding: 4px; border-radius: 4px; }
+        .folder:hover { background: #eee; }
+        .folder::before { content: "📁 "; }
+        .folder.open::before { content: "📂 "; }
+        .item { margin: 4px 0; }
+        .item a { text-decoration: none; color: #0056b3; display: inline-block; padding: 2px 4px; }
+        .item a:hover { text-decoration: underline; background: #eef4ff; border-radius: 3px; }
+        .nested { display: none; }
+        .nested.active { display: block; }
+        #bookmark-container { background: #fff; padding: 20px; border-radius: 8px; box-shadow: 0 2px 5px rgba(0,0,0,0.05); }
+    </style>
 </head>
 <body>
-  <h1>🔖 同期ブックマーク一覧</h1>
-  <div id="bookmark-tree">読み込み中...</div>
+    <h1>マイブックマーク</h1>
+    <div id="bookmark-container">読み込み中...</div>
 
-  <script>
-    // 同一ディレクトリにある Bookmarks.json を読み込む
-    fetch('Bookmarks.json')
-      .then(response => response.json())
-      .then(data => {
-        const container = document.getElementById('bookmark-tree');
-        container.innerHTML = '';
-        
-        // Root（バーとその他のブックマーク）を展開
-        const roots = data.roots;
-        for (const key in roots) {
-          if (roots[key].children) {
-            container.appendChild(renderNode(roots[key]));
-          }
+    <script>
+        fetch('Bookmarks.json')
+            .then(response => response.json())
+            .then(data => {
+                const container = document.getElementById('bookmark-container');
+                container.innerHTML = '';
+                
+                // ブックマークバーのデータを取得
+                const bookmarkBar = data.roots.bookmark_bar.children;
+                const ul = createTree(bookmarkBar);
+                container.appendChild(ul);
+            })
+            .catch(err => {
+                document.getElementById('bookmark-container').innerText = 'ブックマークの読み込みに失敗しました。';
+                console.error(err);
+            });
+
+        function createTree(items) {
+            const ul = document.createElement('ul');
+            if (!items) return ul;
+
+            items.forEach(item => {
+                const li = document.createElement('li');
+                
+                if (item.type === 'folder') {
+                    const div = document.createElement('div');
+                    div.className = 'folder';
+                    div.innerText = item.name;
+                    
+                    const childUl = createTree(item.children);
+                    childUl.className = 'nested';
+                    
+                    // フォルダをクリックしたら開閉する処理
+                    div.addEventListener('click', (e) => {
+                        e.stopPropagation();
+                        div.classList.toggle('open');
+                        childUl.classList.toggle('active');
+                    });
+                    
+                    li.appendChild(div);
+                    li.appendChild(childUl);
+                } else if (item.type === 'url') {
+                    const a = document.createElement('a');
+                    a.href = item.url;
+                    a.innerText = item.name;
+                    a.target = '_blank';
+                    a.rel = 'noopener noreferrer';
+                    li.appendChild(a);
+                }
+                ul.appendChild(li);
+            });
+            return ul;
         }
-      })
-      .catch(err => {
-        document.getElementById('bookmark-tree').innerText = 'ブックマークデータの読み込みに失敗しました。';
-        console.error(err);
-      });
-
-    function renderNode(node) {
-      const ul = document.createElement('ul');
-      if (node.name) {
-        const header = document.createElement('div');
-        header.className = 'folder';
-        header.textContent = '📁 ' + node.name;
-        ul.appendChild(header);
-      }
-
-      if (node.children) {
-        node.children.forEach(child => {
-          const li = document.createElement('li');
-          if (child.type === 'url') {
-            const a = document.createElement('a');
-            a.href = child.url;
-            a.textContent = child.name || child.url;
-            a.target = '_blank';
-            li.appendChild(a);
-          } else if (child.type === 'folder') {
-            li.appendChild(renderNode(child));
-          }
-          ul.appendChild(li);
-        });
-      }
-      return ul;
-    }
-  </script>
+    </script>
 </body>
 </html>
