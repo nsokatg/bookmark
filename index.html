@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>お気に入り一覧</title>
+  <style>
+    body { font-family: sans-serif; padding: 15px; background: #f9f9f9; color: #333; }
+    h1 { font-size: 1.2rem; }
+    ul { list-style: none; padding-left: 20px; }
+    li { margin: 6px 0; }
+    .folder { font-weight: bold; color: #2b542c; margin-top: 10px; }
+    a { color: #0066cc; text-decoration: none; word-break: break-all; }
+    a:hover { text-decoration: underline; }
+  </style>
+</head>
+<body>
+  <h1>🔖 同期ブックマーク一覧</h1>
+  <div id="bookmark-tree">読み込み中...</div>
+
+  <script>
+    // 同一ディレクトリにある Bookmarks.json を読み込む
+    fetch('Bookmarks.json')
+      .then(response => response.json())
+      .then(data => {
+        const container = document.getElementById('bookmark-tree');
+        container.innerHTML = '';
+        
+        // Root（バーとその他のブックマーク）を展開
+        const roots = data.roots;
+        for (const key in roots) {
+          if (roots[key].children) {
+            container.appendChild(renderNode(roots[key]));
+          }
+        }
+      })
+      .catch(err => {
+        document.getElementById('bookmark-tree').innerText = 'ブックマークデータの読み込みに失敗しました。';
+        console.error(err);
+      });
+
+    function renderNode(node) {
+      const ul = document.createElement('ul');
+      if (node.name) {
+        const header = document.createElement('div');
+        header.className = 'folder';
+        header.textContent = '📁 ' + node.name;
+        ul.appendChild(header);
+      }
+
+      if (node.children) {
+        node.children.forEach(child => {
+          const li = document.createElement('li');
+          if (child.type === 'url') {
+            const a = document.createElement('a');
+            a.href = child.url;
+            a.textContent = child.name || child.url;
+            a.target = '_blank';
+            li.appendChild(a);
+          } else if (child.type === 'folder') {
+            li.appendChild(renderNode(child));
+          }
+          ul.appendChild(li);
+        });
+      }
+      return ul;
+    }
+  </script>
+</body>
+</html>
